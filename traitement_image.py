@@ -3,4 +3,5 @@ import numpy as np
 import pillow as plw
 
 print("Hello everybody !")
+print("Salut")
 
