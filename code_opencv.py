@@ -10,30 +10,13 @@ import numpy as np
 from skimage import measure
 from matplotlib import pyplot as plt
 
-def detect_contour(image):
-    # Appliquer un flou gaussien pour réduire les bruits de l'image
-    blur = cv.GaussianBlur(image, (5, 5), 0)
 
-    # Trouver les contours dans l'image binaire
-    contours, hierarchy = cv.findContours(blur, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-    # Trouver le contour le plus grand
-    if not contours: 
-        print('pas de cercle')
-        return None
-    max_contour = max(contours, key=cv.contourArea)
-
-    # Approximer le contour par un cercle en utilisant la méthode des moindres carrés
-    (x, y), radius = cv.minEnclosingCircle(max_contour)
-    center, radius = (int(x),int(y)), int(radius)
-    return center, radius
-
-    
-# Charger l'image et la convertir en niveau de gris
+# Chargement l'image et conversion en niveau de gris
 img = cv.imread("D:\IMT_A\projet_Codevsi\donut1.png")
 gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
 # Seuillage de l'image
-Seuil = 1
+Seuil = 2
 ret, image_seuillee = cv.threshold(gray, Seuil, 255, cv.THRESH_BINARY)
 
 # Ajout de bords à l'image seuillée
@@ -41,6 +24,7 @@ bordersize = 10
 th = cv.copyMakeBorder(image_seuillee, top=bordersize, bottom=bordersize, left=bordersize, right=bordersize, borderType=cv.BORDER_CONSTANT, value=[0,0,0])
 # copyMakeBorder permet d’ajouter temporairement des bords vides à l’image 
 # afin que la fonction flood fill ne remplisse pas une mauvaise zone
+
 
 # Remplissage des contours de l'image seuillée
 im_floodfill = th.copy()
@@ -61,31 +45,66 @@ resultat = cv.bitwise_and(img_resized, img_resized, mask=Gdisque)
 
 
 
-# Appeler la fonction detect_contour
-if detect_contour(Gdisque) != None:
-    center1, radius1 = detect_contour(Gdisque)
-    
-    # Dessiner le cercle sur l'image originale
-    cv.circle(img, center1, radius1, (0, 0, 255), 2)
-    cv.circle(img, center1, 2, (0, 0, 255), 3)
-if detect_contour(Pdisque) != None: 
-    center2, radius2 = detect_contour(Pdisque)
-    
-    # Dessiner le cercle sur l'image originale
-    cv.circle(img, center2, radius2, (0, 255, 0), 2)
-    cv.circle(img, center2, 2, (0, 255, 0), 3)
+def detect_contour(image):
+    # L'image a déjà été seuillée
+    # Appliquer un flou gaussien pour réduire les bruits de l'image
+    blur = cv.GaussianBlur(image, (5, 5), 0)
+    # Trouver les contours dans l'image binaire
+    contours, hierarchy = cv.findContours(blur, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    # Trouver le contour le plus grand
+    if not contours: 
+        print('pas de cercle')
+        return None
+    max_contour = max(contours, key=cv.contourArea)
 
+    # Approximer le contour par un cercle en utilisant la méthode des moindres carrés
+    (x,y), radius = cv.minEnclosingCircle(max_contour)
+    return (int(x), int(y)), int(radius), contours
 
-# Afficher l'image avec le cercle
-cv.imshow('Contour detecte', img)
-cv.waitKey(0)
-cv.destroyAllWindows()
+def afficher():
+    # Appeler la fonction detect_contour
+    if detect_contour(Gdisque) != None:
+        center1, radius1, nbr = detect_contour(Gdisque)
+        # Dessiner le cercle sur l'image originale
+        cv.circle(img, center1, radius1, (0, 0, 255), 2)
+        cv.circle(img, center1, 2, (0, 0, 255), 3)
+    if detect_contour(Pdisque) != None: 
+        center2, radius2, nbr = detect_contour(Pdisque)
+        # Dessiner le cercle sur l'image originale
+        cv.circle(img, center2, radius2, (0, 255, 0), 2)
+        cv.circle(img, center2, 2, (0, 255, 0), 3)
+
+    #Dessine la droite passant par les 2 centres
+    cv.line(img, center1, center2, (255,0,0), 2)
+    
+    excentrement = np.sqrt((center1[0]-center2[0])^2+(center1[1]-center2[1])^2)
+    diametreGdisque = 2*radius1
+    
+    #Afficher une zone de texte sur l'image
+    cv.putText(img, "L'excentrement entre les deux disques est de :" + str(excentrement) , (10, 30), cv.FONT_HERSHEY_PLAIN, 1.5, (0, 255, 0)) 
+    #On donne l'origine du texte qui est le point en bas à gauche du texte 
+    #(l'origine de l'image étant toujours en haut à gauche), la police de caractères, la taille relative 
+    #et la couleur.
+    
+    # Afficher l'image avec le cercle
+    cv.imshow('Contour detecte', img)
+    cv.waitKey(0)
+    cv.destroyAllWindows()
+    return excentrement, diametreGdisque
+
+excentrement, diametreGdisque = afficher()
 
 # write result to disk
 #cv.imwrite("dark_circle_fit.png", Gdisque)
 
 
-#cv.imshow('Gdisque', Gdisque)
+#-----------------------------------------------------------#
+
+
+
+#blure = cv.GaussianBlur(Pdisque, (5, 5), 0)
+
+#cv.imshow('image_seuillee', im_floodfill)
 #cv.waitKey(0)
 #cv.destroyAllWindows()
 
