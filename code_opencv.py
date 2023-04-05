@@ -7,9 +7,6 @@ Created on Wed Mar 22 09:04:37 2023
 
 import cv2 as cv
 import numpy as np
-from skimage import measure
-from matplotlib import pyplot as plt
-
 
 # Chargement l'image et conversion en niveau de gris
 img = cv.imread("D:\IMT_A\projet_Codevsi\donut1.png")
@@ -30,9 +27,12 @@ th = cv.copyMakeBorder(image_seuillee, top=bordersize, bottom=bordersize, left=b
 im_floodfill = th.copy()
 h, w = th.shape[:2] # On récupère les dimensions hauteur et largeur de l'image
 mask = np.zeros((h+2, w+2), np.uint8)
-cv.floodFill(im_floodfill, mask, (0,0), 255) # Le contour à remplir est en noir et le reste en blanc
-Pdisque = cv.bitwise_not(im_floodfill) # C'est pourquoi nous inversons l'image afin d'avoir la zone à remplir en blanc
-th = th | Pdisque
+cv.floodFill(im_floodfill, mask, (0,0), 255) 
+# Le contour à remplir est en noir et le reste en blanc
+# C'est pourquoi nous inversons l'image afin d'avoir la zone à remplir en blanc
+Pdisque = cv.bitwise_not(im_floodfill) 
+# On fait un AND entre l'image seuillée et la zone remplie en blanc
+th = th | Pdisque 
 
 # Enlèvement des bords de l'image
 Gdisque = th[bordersize:len(th)-bordersize, bordersize:len(th[0])-bordersize]
@@ -59,17 +59,30 @@ def detect_contour(image):
 
     # Approximer le contour par un cercle en utilisant la méthode des moindres carrés
     (x,y), radius = cv.minEnclosingCircle(max_contour)
-    return (int(x), int(y)), int(radius), contours
+    center, radius = (int(x), int(y)), int(radius)
+    return center, radius, contours
+
+def afficherDisques():
+    center1, radius1, contours = detect_contour(Gdisque)
+    if len(contours) != 0:
+       for contour in contours:
+           (x,y), r = cv.minEnclosingCircle(contour)
+           center, r = (int(x), int(y)), int(r)
+           cv.circle(img, center, r, (0,0,255), 2)
+    cv.imshow('Contours detecte', img)
+    cv.waitKey(0)
+    cv.destroyAllWindows()
+    return
 
 def afficher():
     # Appeler la fonction detect_contour
     if detect_contour(Gdisque) != None:
-        center1, radius1, nbr = detect_contour(Gdisque)
+        center1, radius1, contours = detect_contour(Gdisque)
         # Dessiner le cercle sur l'image originale
         cv.circle(img, center1, radius1, (0, 0, 255), 2)
         cv.circle(img, center1, 2, (0, 0, 255), 3)
     if detect_contour(Pdisque) != None: 
-        center2, radius2, nbr = detect_contour(Pdisque)
+        center2, radius2, contours = detect_contour(Pdisque)
         # Dessiner le cercle sur l'image originale
         cv.circle(img, center2, radius2, (0, 255, 0), 2)
         cv.circle(img, center2, 2, (0, 255, 0), 3)
@@ -77,7 +90,7 @@ def afficher():
     #Dessine la droite passant par les 2 centres
     cv.line(img, center1, center2, (255,0,0), 2)
     
-    excentrement = np.sqrt((center1[0]-center2[0])^2+(center1[1]-center2[1])^2)
+    excentrement = np.sqrt((center1[0]-center2[0])**2+(center1[1]-center2[1])**2)
     diametreGdisque = 2*radius1
     
     #Afficher une zone de texte sur l'image
@@ -90,9 +103,22 @@ def afficher():
     cv.imshow('Contour detecte', img)
     cv.waitKey(0)
     cv.destroyAllWindows()
+    print(center1)
+    print(center2)
+    return 
+
+def renvoieValeur():
+    if detect_contour(Gdisque) != None:
+        center1, radius1, contours = detect_contour(Gdisque)
+    if detect_contour(Pdisque) != None: 
+        center2, radius2, contours = detect_contour(Pdisque)
+        
+    excentrement = np.sqrt((center1[0]-center2[0])**2+(center1[1]-center2[1])**2)
+    diametreGdisque = 2*radius1
+    
     return excentrement, diametreGdisque
 
-excentrement, diametreGdisque = afficher()
+excentrement, diametreGdisque = renvoieValeur()
 
 # write result to disk
 #cv.imwrite("dark_circle_fit.png", Gdisque)
